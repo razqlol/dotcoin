@@ -138,6 +138,30 @@ class Dotcoin:
         response.raise_for_status()
         return response.json()
     
+    def upgrade_multitap(self, token: str, level: int):
+        url = 'https://api.dotcoin.bot/rest/v1/rpc/add_multitap'
+        data = json.dumps({'lvl': level})
+        self.headers.update({
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        })
+
+        response = self.session.post(url, headers=self.headers, data=data)
+        response.raise_for_status()
+        return response.json()
+    
+    def upgrade_attempts(self, token: str, level: int):
+        url = 'https://api.dotcoin.bot/rest/v1/rpc/add_attempts'
+        data = json.dumps({'lvl': level})
+        self.headers.update({
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json'
+        })
+
+        response = self.session.post(url, headers=self.headers, data=data)
+        response.raise_for_status()
+        return response.json()
+    
     def upgrade_dtc_miner(self, token: str):
         url = 'https://api.dotcoin.bot/functions/v1/upgradeDTCMiner'
         self.headers.update({
@@ -175,7 +199,45 @@ class Dotcoin:
     
     def question(self):
         while True:
-            miner_upgrade = input("Upgarde DTC Mining? [y/n] -> ").strip().lower()
+            multitap_upgrade = input("Upgrade Multitap Level? [y/n] -> ").strip().lower()
+            if multitap_upgrade in ["y", "n"]:
+                multitap_upgrade = multitap_upgrade == "y"
+                break
+            else:
+                print(f"{Fore.RED+Style.BRIGHT}Invalid Input.{Fore.WHITE+Style.BRIGHT} Choose 'y' to upgrade or 'n' to skip.{Style.RESET_ALL}")
+        multitap_count = 0
+        if multitap_upgrade:
+            while True:
+                try:
+                    multitap_count = int(input("How many times? -> "))
+                    if multitap_count > 0:
+                        break
+                    else:
+                        print(f"{Fore.RED+Style.BRIGHT}Please enter a positive number.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED+Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+        
+        while True:
+            attempts_upgrade = input("Upgrade Limit Attempts? [y/n] -> ").strip().lower()
+            if attempts_upgrade in ["y", "n"]:
+                attempts_upgrade = attempts_upgrade == "y"
+                break
+            else:
+                print(f"{Fore.RED+Style.BRIGHT}Invalid Input.{Fore.WHITE+Style.BRIGHT} Choose 'y' to upgrade or 'n' to skip.{Style.RESET_ALL}")
+        attempts_count = 0
+        if attempts_upgrade:
+            while True:
+                try:
+                    attempts_count = int(input("How many times? -> "))
+                    if attempts_count > 0:
+                        break
+                    else:
+                        print(f"{Fore.RED+Style.BRIGHT}Please enter a positive number.{Style.RESET_ALL}")
+                except ValueError:
+                    print(f"{Fore.RED+Style.BRIGHT}Invalid input. Enter a number.{Style.RESET_ALL}")
+
+        while True:
+            miner_upgrade = input("Upgarde DTC Mining Level? [y/n] -> ").strip().lower()
             if miner_upgrade in ["y", "n"]:
                 miner_upgrade = miner_upgrade == "y"
                 break
@@ -198,9 +260,9 @@ class Dotcoin:
             else:
                 print(f"{Fore.RED+Style.BRIGHT}Invalid Input.{Fore.WHITE+Style.BRIGHT} Choose 'y' to check or 'n' to skip.{Style.RESET_ALL}")
 
-        return miner_upgrade, go_spin, go_task
+        return multitap_upgrade, multitap_count, attempts_upgrade, attempts_count, miner_upgrade, go_spin, go_task
     
-    def process_query(self, query: str, dtc_miner: bool, spinner: bool, check_task: bool):
+    def process_query(self, query: str, add_multitap: bool, multitap_count: int, add_attempts: bool, attempts_count: int, dtc_miner: bool, spinner: bool, check_task: bool):
 
         token = self.get_token(query)
 
@@ -256,7 +318,67 @@ class Dotcoin:
 
                 self.log(f"{Fore.CYAN+Style.BRIGHT}[ Upgrade Boost ]{Style.RESET_ALL}")
                 time.sleep(1)
+                if add_multitap:
+                    for i in range(multitap_count):
+                        user = self.user_info(token)
+                        multitap_level = user['multiple_clicks']
+                        upgrade = self.upgrade_multitap(token, multitap_level)
+                        if upgrade['success']:
+                            self.log(
+                                f"{Fore.MAGENTA+Style.BRIGHT}       -> Multitap         : {Style.RESET_ALL}"
+                                f"{Fore.GREEN+Style.BRIGHT}Upgrade Success{Style.RESET_ALL}"
+                                f"{Fore.WHITE+Style.BRIGHT} - {Style.RESET_ALL}"
+                                f"{Fore.MAGENTA+Style.BRIGHT}Level {Style.RESET_ALL}"
+                                f"{Fore.WHITE+Style.BRIGHT}{multitap_level + 1}{Style.RESET_ALL}"
+                            )
+                        else:
+                            self.log(
+                                f"{Fore.MAGENTA+Style.BRIGHT}       -> Multitap         : {Style.RESET_ALL}"
+                                f"{Fore.RED+Style.BRIGHT}Not Enough Balance{Style.RESET_ALL}"
+                            )
+                            break
+                        time.sleep(1)
+                else:
+                    self.log(
+                        f"{Fore.MAGENTA+Style.BRIGHT}       -> Multitap         : {Style.RESET_ALL}"
+                        f"{Fore.YELLOW+Style.BRIGHT}Skipped{Style.RESET_ALL}"
+                    )
+                time.sleep(1)
+
+                self.log(f"{Fore.CYAN+Style.BRIGHT}[ Upgrade Boost ]{Style.RESET_ALL}")
+                time.sleep(1)
+                if add_attempts:
+                    for i in range(attempts_count):
+                        user = self.user_info(token)
+                        attempts_level = user['limit_attempts'] - 9
+                        upgrade = self.upgrade_attempts(token, attempts_level)
+                        if upgrade['success']:
+                            self.log(
+                                f"{Fore.MAGENTA+Style.BRIGHT}       -> Limit Attempts   : {Style.RESET_ALL}"
+                                f"{Fore.GREEN+Style.BRIGHT}Upgrade Success{Style.RESET_ALL}"
+                                f"{Fore.WHITE+Style.BRIGHT} - {Style.RESET_ALL}"
+                                f"{Fore.MAGENTA+Style.BRIGHT}Level {Style.RESET_ALL}"
+                                f"{Fore.WHITE+Style.BRIGHT}{attempts_level + 1}{Style.RESET_ALL}"
+                            )
+                        else:
+                            self.log(
+                                f"{Fore.MAGENTA+Style.BRIGHT}       -> Limit Attempts   : {Style.RESET_ALL}"
+                                f"{Fore.RED+Style.BRIGHT}Not Enough Balance{Style.RESET_ALL}"
+                            )
+                            break
+                        time.sleep(1)
+                else:
+                    self.log(
+                        f"{Fore.MAGENTA+Style.BRIGHT}       -> Limit Attempts   : {Style.RESET_ALL}"
+                        f"{Fore.YELLOW+Style.BRIGHT}Skipped{Style.RESET_ALL}"
+                    )
+                time.sleep(1)
+
+                self.log(f"{Fore.CYAN+Style.BRIGHT}[ Upgrade Boost ]{Style.RESET_ALL}")
+                time.sleep(1)
                 if dtc_miner:
+                    user = self.user_info(token)
+                    miner_level = user['dtc_level']
                     upgrade = self.upgrade_dtc_miner(token)
                     if upgrade['success']:
                         self.log(
@@ -264,7 +386,7 @@ class Dotcoin:
                             f"{Fore.GREEN+Style.BRIGHT}Upgrade Success{Style.RESET_ALL}"
                             f"{Fore.WHITE+Style.BRIGHT} - {Style.RESET_ALL}"
                             f"{Fore.MAGENTA+Style.BRIGHT}Level {Style.RESET_ALL}"
-                            f"{Fore.WHITE+Style.BRIGHT}{user['dtc_level'] + 1}{Style.RESET_ALL}"
+                            f"{Fore.WHITE+Style.BRIGHT}{miner_level + 1}{Style.RESET_ALL}"
                         )
                     else:
                         self.log(
@@ -285,39 +407,55 @@ class Dotcoin:
                     )
                     time.sleep(1)
 
-                    spinner_time = parser.isoparse(user['spin_updated_at'])
-                    spinner_time_wib = spinner_time.astimezone(wib)
-                    spinner_ready = (spinner_time_wib + timedelta(hours=8)).strftime('%x %X %Z')
+                    assets = self.assets_info(token)
+                    for asset in assets:
+                        if asset['symbol'] == 'DTC':
+                            dtc_amount = asset['amount']
 
-                    spin = self.spinner(token)
-                    if spin['success']:
-                        if spin['symbol'] == 'VENOM':
-                            self.log(
-                                f"{Fore.MAGENTA+Style.BRIGHT}       -> Spinner : {Style.RESET_ALL}"
-                                f"{Fore.GREEN+Style.BRIGHT}Success{Style.RESET_ALL}"
-                                f"{Fore.WHITE+Style.BRIGHT} - {Style.RESET_ALL}"
-                                f"{Fore.MAGENTA+Style.BRIGHT}Reward {Style.RESET_ALL}"
-                                f"{Fore.WHITE+Style.BRIGHT}{spin['amount']} $VENOM{Style.RESET_ALL}"
-                            )
-                        else:
-                            self.log(
-                                f"{Fore.MAGENTA+Style.BRIGHT}       -> Spinner : {Style.RESET_ALL}"
-                                f"{Fore.GREEN+Style.BRIGHT}Success{Style.RESET_ALL}"
-                                f"{Fore.WHITE+Style.BRIGHT} - {Style.RESET_ALL}"
-                                f"{Fore.MAGENTA+Style.BRIGHT}Reward {Style.RESET_ALL}"
-                                f"{Fore.WHITE+Style.BRIGHT}{spin['amount']} $DTC{Style.RESET_ALL}"
-                            )
-                    else:
-                        self.log(
-                            f"{Fore.MAGENTA+Style.BRIGHT}       -> Spinner : {Style.RESET_ALL}"
-                            f"{Fore.YELLOW+Style.BRIGHT}Already Play Spinner{Style.RESET_ALL}"
-                        )
-                        self.log(
-                            f"{Fore.MAGENTA+Style.BRIGHT}       -> Spinner : {Style.RESET_ALL}"
-                            f"{Fore.YELLOW+Style.BRIGHT}Comeback at {Style.RESET_ALL}"
-                            f"{Fore.WHITE+Style.BRIGHT}{spinner_ready}{Style.RESET_ALL}"
-                        )
-                    time.sleep(1)
+                            if dtc_amount >= 5:
+
+                                spinner_time = parser.isoparse(user['spin_updated_at'])
+                                spinner_time_wib = spinner_time.astimezone(wib)
+                                spinner_ready = (spinner_time_wib + timedelta(hours=8)).strftime('%x %X %Z')
+
+                                spin = self.spinner(token)
+                                if spin['success']:
+                                    if spin['symbol'] == 'VENOM':
+                                        self.log(
+                                            f"{Fore.MAGENTA+Style.BRIGHT}       -> Spinner : {Style.RESET_ALL}"
+                                            f"{Fore.GREEN+Style.BRIGHT}Success{Style.RESET_ALL}"
+                                            f"{Fore.WHITE+Style.BRIGHT} - {Style.RESET_ALL}"
+                                            f"{Fore.MAGENTA+Style.BRIGHT}Reward {Style.RESET_ALL}"
+                                            f"{Fore.WHITE+Style.BRIGHT}{spin['amount']} $VENOM{Style.RESET_ALL}"
+                                        )
+                                    else:
+                                        self.log(
+                                            f"{Fore.MAGENTA+Style.BRIGHT}       -> Spinner : {Style.RESET_ALL}"
+                                            f"{Fore.GREEN+Style.BRIGHT}Success{Style.RESET_ALL}"
+                                            f"{Fore.WHITE+Style.BRIGHT} - {Style.RESET_ALL}"
+                                            f"{Fore.MAGENTA+Style.BRIGHT}Reward {Style.RESET_ALL}"
+                                            f"{Fore.WHITE+Style.BRIGHT}{spin['amount']} $DTC{Style.RESET_ALL}"
+                                        )
+                                else:
+                                    self.log(
+                                        f"{Fore.MAGENTA+Style.BRIGHT}       -> Spinner : {Style.RESET_ALL}"
+                                        f"{Fore.YELLOW+Style.BRIGHT}Already Play Spinner{Style.RESET_ALL}"
+                                    )
+                                    self.log(
+                                        f"{Fore.MAGENTA+Style.BRIGHT}       -> Spinner : {Style.RESET_ALL}"
+                                        f"{Fore.YELLOW+Style.BRIGHT}Comeback at {Style.RESET_ALL}"
+                                        f"{Fore.WHITE+Style.BRIGHT}{spinner_ready}{Style.RESET_ALL}"
+                                    )
+                                time.sleep(1)
+                            else:
+                                self.log(
+                                    f"{Fore.MAGENTA+Style.BRIGHT}       -> Spinner : {Style.RESET_ALL}"
+                                    f"{Fore.YELLOW+Style.BRIGHT}Not Enough DTC{Style.RESET_ALL}"
+                                )
+                                self.log(
+                                    f"{Fore.MAGENTA+Style.BRIGHT}       -> Amount  : {Style.RESET_ALL}"
+                                    f"{Fore.WHITE+Style.BRIGHT}{dtc_amount} $DTC{Style.RESET_ALL}"
+                                )
                 else:
                     self.log(
                         f"{Fore.CYAN+Style.BRIGHT}[ Play Game ] {Style.RESET_ALL}"
@@ -460,7 +598,7 @@ class Dotcoin:
             with open('query.txt', 'r') as file:
                 queries = [line.strip() for line in file if line.strip()]
 
-            dtc_miner, spinner, check_task = self.question()
+            add_multitap, multitap_count, add_attempts, attempts_count, dtc_miner, spinner, check_task = self.question()
 
             while True:
                 self.clear_terminal()
@@ -474,7 +612,7 @@ class Dotcoin:
                 for query in queries:
                     query = query.strip()
                     if query:
-                        self.process_query(query, dtc_miner, spinner, check_task)
+                        self.process_query(query, add_multitap, multitap_count, add_attempts, attempts_count, dtc_miner, spinner, check_task)
                         self.log(f"{Fore.CYAN + Style.BRIGHT}-{Style.RESET_ALL}" * 75)
 
                 seconds = 1800
